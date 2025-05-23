@@ -2,18 +2,21 @@ version: 0.2
 
 phases:
   install:
-    runtime-versions:
-      java: corretto17
-  pre_build:
     commands:
-      - echo "Starting pre-build phase..."
+      - echo "Installing Java 17 and Maven on Amazon Linux 2023..."
+      - sudo dnf install -y java-17-amazon-corretto
+      - sudo dnf install -y maven
+      - java -version
+      - mvn -version
+
   build:
     commands:
-      - echo "Building Java application with Maven..."
+      - echo "Running Maven build..."
       - mvn clean package -DskipTests
+
   post_build:
     commands:
-      - echo "Build completed at $(date)"
+      - echo "Build completed on $(date)"
 
 artifacts:
   files:
