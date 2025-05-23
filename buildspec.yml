@@ -16,7 +16,7 @@ phases:
 
   post_build:
     commands:
-      - echo "Build completed on $(date)"
+      - echo "Build completed successfully on $(date)"
 
 artifacts:
   files:
