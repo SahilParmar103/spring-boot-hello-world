@@ -4,7 +4,7 @@ phases:
   install:
     commands:
       - echo "Installing Java 17..."
-      - sudo dnf install -y java-17-amazon-corretto
+      - sudo yum install -y java-17-amazon-corretto
 
       - echo "Installing Maven 3.8.8 manually..."
       - wget https://dlcdn.apache.org/maven/maven-3/3.8.8/binaries/apache-maven-3.8.8-bin.tar.gz
