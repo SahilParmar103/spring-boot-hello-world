@@ -3,10 +3,15 @@ version: 0.2
 phases:
   install:
     commands:
-      - echo "Installing Java 17 and Maven on Amazon Linux 2023..."
-      - sudo yum install -y java-17-amazon-corretto
-      - sudo yum install -y maven
-      - java -version
+      - echo "Installing Java 17..."
+      - sudo dnf install -y java-17-amazon-corretto
+
+      - echo "Installing Maven 3.8.8 manually..."
+      - wget https://dlcdn.apache.org/maven/maven-3/3.8.8/binaries/apache-maven-3.8.8-bin.tar.gz
+      - tar -xzf apache-maven-3.8.8-bin.tar.gz
+      - mv apache-maven-3.8.8 /opt/maven
+      - export PATH=/opt/maven/bin:$PATH
+      - echo "export PATH=/opt/maven/bin:$PATH" >> ~/.bashrc
       - mvn -version
 
   build:
