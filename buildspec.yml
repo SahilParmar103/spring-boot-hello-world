@@ -24,4 +24,5 @@ artifacts:
     - pom.xml
     - appspec.yml
     - scripts/*
+    - application.properties
   discard-paths: yes
