@@ -4,8 +4,8 @@ phases:
   install:
     commands:
       - echo "Installing Java 17 and Maven on Amazon Linux 2023..."
-      - sudo dnf install -y java-17-amazon-corretto
-      - sudo dnf install -y maven
+      - sudo yum install -y java-17-amazon-corretto
+      - sudo yum install -y maven
       - java -version
       - mvn -version
 
