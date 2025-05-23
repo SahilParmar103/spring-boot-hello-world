@@ -21,6 +21,7 @@ phases:
 artifacts:
   files:
     - target/*.jar
+    - pom.xml
     - appspec.yml
     - scripts/*
   discard-paths: yes
