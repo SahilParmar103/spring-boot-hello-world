@@ -1,5 +1,6 @@
 version: 0.0
 os: linux
+
 files:
   - source: /
     destination: /home/ec2-user/app
@@ -9,10 +10,12 @@ hooks:
     - location: scripts/stop.sh
       timeout: 60
       runas: ec2-user
+
   AfterInstall:
     - location: scripts/install.sh
       timeout: 60
       runas: ec2-user
+
   ApplicationStart:
     - location: scripts/start.sh
       timeout: 60
