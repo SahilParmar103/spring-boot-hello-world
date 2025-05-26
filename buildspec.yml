@@ -26,6 +26,6 @@ phases:
 artifacts:
   files:
     - appspec.yml
-    - scripts/*.sh
-    - target/*.jar
-  discard-paths: yes
+    - scripts/**    # Include folder structure
+    - target/**     # Include JAR in target folder
+  discard-paths: no   # ❗ Preserve directory structure
