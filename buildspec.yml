@@ -27,5 +27,5 @@ artifacts:
   files:
     - target/*.jar
     - appspec.yml
-    - scripts/
+    - scripts/*.sh
   discard-paths: yes
