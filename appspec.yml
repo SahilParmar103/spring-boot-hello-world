@@ -7,15 +7,15 @@ files:
 
 hooks:
 ApplicationStop:
-    - location: scripts/stop.sh
+    - location: stop.sh
       timeout: 60
       runas: ec2-user
 ApplicationStart:
-    - location: scripts/start.sh
+    - location: start.sh
       timeout: 60
       runas: ec2-user
   AfterInstall:
-    - location: scripts/install.sh
+    - location: install.sh
       timeout: 60
       runas: ec2-user
 
