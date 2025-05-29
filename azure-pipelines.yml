@@ -38,3 +38,14 @@ steps:
     kubectlVersion: '1.29.0'
     checkLatestKubectl: false
 
+- task: HelmDeploy@1
+  displayName: 'helm upgrade'
+  inputs:
+    connectionType: 'Kubernetes Service Connection'
+    kubernetesServiceConnection: 
+    command: upgrade
+    chartType: FilePath
+    chartPath: '$(Pipeline.Workspace)/s/chart'
+    releaseName: demoeks
+    force: true
+
