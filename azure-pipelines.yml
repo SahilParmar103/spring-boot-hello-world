@@ -19,12 +19,12 @@ steps:
     jdkArchitectureOption: 'x64'
     publishJUnitResults: true
     testResultsFiles: '**/surefire-reports/TEST-*.xml'
-    goals: 'clean compile jib:build'
+    goals: 'package'
 
 - task: PublishPipelineArtifact@1
   displayName: 'Publish Pipeline Artifact'
   inputs:
-    artifact: demoaws
+    artifact: drop
 
 - task: DownloadPipelineArtifact@2
   inputs:
