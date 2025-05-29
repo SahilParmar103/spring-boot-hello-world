@@ -19,4 +19,22 @@ steps:
     jdkArchitectureOption: 'x64'
     publishJUnitResults: true
     testResultsFiles: '**/surefire-reports/TEST-*.xml'
-    goals: 'package'
+    goals: 'clean compile jib:build'
+
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish Pipeline Artifact'
+  inputs:
+    artifact: demoaws
+
+- task: DownloadPipelineArtifact@2
+  inputs:
+    buildType: 'current'
+    targetPath: '$(Pipeline.Workspace)'
+
+- task: HelmInstaller@0
+  displayName: 'Install Helm 3.14.0'
+  inputs:
+    helmVersion: '3.14.0'
+    kubectlVersion: '1.29.0'
+    checkLatestKubectl: false
+
