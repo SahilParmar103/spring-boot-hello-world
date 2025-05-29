@@ -31,7 +31,7 @@ steps:
     buildType: 'current'
     targetPath: '$(Pipeline.Workspace)'
 
-- task: HelmInstaller@0
+- task: HelmInstaller@1
   displayName: 'Install Helm 3.14.0'
   inputs:
     helmVersion: '3.14.0'
