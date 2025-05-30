@@ -7,7 +7,7 @@ terraform {
   }
 
   backend "s3" {
-    bucket = "bucketforazur"     # ← Replace this
+    bucket = "bucketforazur"
     key    = "eks/terraform.tfstate"
     region = "us-east-1"
     encrypt = true
@@ -28,6 +28,18 @@ locals {
   ]
 }
 
+# ✅ ECR Repository for Spring Boot App
+resource "aws_ecr_repository" "spring_boot_app" {
+  name                 = "spring-boot-app"
+  image_tag_mutability = "MUTABLE"
+
+  tags = {
+    Name        = "spring-boot-app"
+    Environment = "dev"
+    Terraform   = "true"
+  }
+}
+
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "20.8.5"
@@ -38,7 +50,7 @@ module "eks" {
   vpc_id     = local.vpc_id
   subnet_ids = local.subnet_ids
 
-  iam_role_arn = "arn:aws:iam::474668397798:role/CustomIAMRoleForEKS"  # ✅ Use your custom EKS role
+  iam_role_arn = "arn:aws:iam::474668397798:role/CustomIAMRoleForEKS"
 
   manage_aws_auth = true
 
