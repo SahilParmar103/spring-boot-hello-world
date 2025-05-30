@@ -25,15 +25,22 @@ stages:
             inputs:
               terraformVersion: '1.6.6'
 
-          # Export AWS credentials into environment variables
+          # Set AWS credentials into environment variables
           - task: AWSCLI@1
-            name: awsCredentialsExport
-            displayName: 'Export AWS Credentials'
+            displayName: 'Verify AWS Access'
             inputs:
               awsCredentials: 'aws-devops-admin'
               awsRegion: '$(AWS_REGION)'
               awsCommand: 'sts'
               awsSubCommand: 'get-caller-identity'
+
+          - script: |
+              echo "##vso[task.setvariable variable=AWS_ACCESS_KEY_ID]$AWS_ACCESS_KEY_ID"
+              echo "##vso[task.setvariable variable=AWS_SECRET_ACCESS_KEY]$AWS_SECRET_ACCESS_KEY"
+            displayName: 'Export AWS Credentials to Env Vars'
+            env:
+              AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
 
           - script: terraform init
             displayName: 'Terraform Init'
