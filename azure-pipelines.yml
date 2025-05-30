@@ -25,8 +25,10 @@ stages:
             inputs:
               terraformVersion: '1.6.6'
 
+          # Export AWS credentials into environment variables
           - task: AWSCLI@1
-            displayName: 'Verify AWS Access'
+            name: awsCredentialsExport
+            displayName: 'Export AWS Credentials'
             inputs:
               awsCredentials: 'aws-devops-admin'
               awsRegion: '$(AWS_REGION)'
@@ -35,12 +37,21 @@ stages:
 
           - script: terraform init
             displayName: 'Terraform Init'
+            env:
+              AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
 
           - script: terraform plan -out=tfplan
             displayName: 'Terraform Plan'
+            env:
+              AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
 
           - script: terraform apply -auto-approve tfplan
             displayName: 'Terraform Apply'
+            env:
+              AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
 
   - stage: BuildAndPush
     displayName: 'Build and Push Docker Image'
@@ -61,21 +72,19 @@ stages:
           - script: docker build -t $(ECR_URI):latest .
             displayName: 'Build Docker Image'
 
-          - task: AWSCLI@1
-            displayName: 'Login to AWS (for Docker)'
-            inputs:
-              awsCredentials: 'aws-devops-admin'
-              awsRegion: '$(AWS_REGION)'
-              awsCommand: 'ecr'
-              awsSubCommand: 'get-login-password'
-
           - script: |
               aws ecr get-login-password --region $(AWS_REGION) \
               | docker login --username AWS --password-stdin $(ECR_URI)
             displayName: 'Docker Login to ECR'
+            env:
+              AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
 
           - script: docker push $(ECR_URI):latest
             displayName: 'Push Docker Image to ECR'
+            env:
+              AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
 
   - stage: DeployToEKS
     displayName: 'Deploy to EKS'
@@ -89,6 +98,9 @@ stages:
           - script: |
               aws eks update-kubeconfig --name $(CLUSTER_NAME) --region $(AWS_REGION)
             displayName: 'Configure kubectl for EKS'
+            env:
+              AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
 
           - script: |
               kubectl apply -f deployment/deployment.yaml
