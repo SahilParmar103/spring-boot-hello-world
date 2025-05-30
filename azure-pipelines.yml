@@ -26,7 +26,7 @@ stages:
 
           - task: AWSCLI@1
             inputs:
-              awsCredentials: 'aws-devops-admin' # 🔁 Replace with your actual service connection name
+              awsCredentials: 'aws-devops-admin'
               awsRegion: '$(AWS_REGION)'
               command: 'sts get-caller-identity'
             displayName: 'Verify AWS Access'
