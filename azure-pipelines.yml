@@ -17,6 +17,7 @@ stages:
     displayName: 'Provision EKS via Terraform'
     jobs:
       - job: Terraform
+        displayName: 'Run Terraform'
         steps:
           - checkout: self
 
@@ -29,18 +30,16 @@ stages:
             inputs:
               awsCredentials: 'aws-devops-admin'
               awsRegion: '$(AWS_REGION)'
-              awsCommand: 'sts get-caller-identity'
+              awsCommand: 'sts'
+              awsSubCommand: 'get-caller-identity'
 
-          - script: |
-              terraform init
+          - script: terraform init
             displayName: 'Terraform Init'
 
-          - script: |
-              terraform plan -out=tfplan
+          - script: terraform plan -out=tfplan
             displayName: 'Terraform Plan'
 
-          - script: |
-              terraform apply -auto-approve tfplan
+          - script: terraform apply -auto-approve tfplan
             displayName: 'Terraform Apply'
 
   - stage: BuildAndPush
@@ -48,6 +47,7 @@ stages:
     dependsOn: TerraformEKS
     jobs:
       - job: Build
+        displayName: 'Docker Build & ECR Push'
         steps:
           - checkout: self
 
@@ -56,40 +56,41 @@ stages:
               mavenPomFile: 'pom.xml'
               goals: 'clean package'
               options: '-DskipTests'
+            displayName: 'Build Spring Boot JAR'
 
-          - script: |
-              docker build -t $(ECR_URI):latest .
+          - script: docker build -t $(ECR_URI):latest .
             displayName: 'Build Docker Image'
 
           - task: AWSCLI@1
-            displayName: 'Login to ECR'
+            displayName: 'Login to AWS (for Docker)'
             inputs:
               awsCredentials: 'aws-devops-admin'
               awsRegion: '$(AWS_REGION)'
-              awsCommand: 'ecr get-login-password'
+              awsCommand: 'ecr'
+              awsSubCommand: 'get-login-password'
 
           - script: |
               aws ecr get-login-password --region $(AWS_REGION) \
               | docker login --username AWS --password-stdin $(ECR_URI)
             displayName: 'Docker Login to ECR'
 
-          - script: |
-              docker push $(ECR_URI):latest
-            displayName: 'Push to ECR'
+          - script: docker push $(ECR_URI):latest
+            displayName: 'Push Docker Image to ECR'
 
   - stage: DeployToEKS
     displayName: 'Deploy to EKS'
     dependsOn: BuildAndPush
     jobs:
       - job: Deploy
+        displayName: 'Apply Kubernetes Manifests'
         steps:
           - checkout: self
 
           - script: |
               aws eks update-kubeconfig --name $(CLUSTER_NAME) --region $(AWS_REGION)
-            displayName: 'Configure kubectl with EKS'
+            displayName: 'Configure kubectl for EKS'
 
           - script: |
               kubectl apply -f deployment/deployment.yaml
               kubectl apply -f deployment/service.yaml
-            displayName: 'Deploy to EKS'
+            displayName: 'Deploy Kubernetes Resources'
