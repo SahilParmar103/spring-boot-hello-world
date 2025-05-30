@@ -7,11 +7,10 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "your-s3-backend-bucket-name"
-    key            = "eks/terraform.tfstate"
-    region         = "us-east-1"
-    encrypt        = true
-    dynamodb_table = "terraform-lock-table"
+    bucket = "bucketforazur"     # ← Replace this
+    key    = "eks/terraform.tfstate"
+    region = "us-east-1"
+    encrypt = true
   }
 }
 
@@ -38,6 +37,10 @@ module "eks" {
 
   vpc_id     = local.vpc_id
   subnet_ids = local.subnet_ids
+
+  iam_role_arn = "arn:aws:iam::474668397798:role/CustomIAMRoleForEKS"  # ✅ Use your custom EKS role
+
+  manage_aws_auth = true
 
   eks_managed_node_groups = {
     default = {
