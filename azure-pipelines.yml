@@ -25,7 +25,7 @@ stages:
             inputs:
               terraformVersion: '1.6.6'
 
-          # Set AWS credentials into environment variables
+          # Authenticate with AWS to get credentials
           - task: AWSCLI@1
             displayName: 'Verify AWS Access'
             inputs:
@@ -34,6 +34,7 @@ stages:
               awsCommand: 'sts'
               awsSubCommand: 'get-caller-identity'
 
+          # Export credentials into pipeline variables
           - script: |
               echo "##vso[task.setvariable variable=AWS_ACCESS_KEY_ID]$AWS_ACCESS_KEY_ID"
               echo "##vso[task.setvariable variable=AWS_SECRET_ACCESS_KEY]$AWS_SECRET_ACCESS_KEY"
@@ -65,7 +66,7 @@ stages:
     dependsOn: TerraformEKS
     jobs:
       - job: Build
-        displayName: 'Docker Build & ECR Push'
+        displayName: 'Docker Build & Push'
         steps:
           - checkout: self
 
@@ -74,7 +75,7 @@ stages:
               mavenPomFile: 'pom.xml'
               goals: 'clean package'
               options: '-DskipTests'
-            displayName: 'Build Spring Boot JAR'
+            displayName: 'Build Spring Boot App'
 
           - script: docker build -t $(ECR_URI):latest .
             displayName: 'Build Docker Image'
@@ -88,7 +89,7 @@ stages:
               AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
 
           - script: docker push $(ECR_URI):latest
-            displayName: 'Push Docker Image to ECR'
+            displayName: 'Push Image to ECR'
             env:
               AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
               AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
@@ -98,13 +99,13 @@ stages:
     dependsOn: BuildAndPush
     jobs:
       - job: Deploy
-        displayName: 'Apply Kubernetes Manifests'
+        displayName: 'Kubernetes Apply'
         steps:
           - checkout: self
 
           - script: |
               aws eks update-kubeconfig --name $(CLUSTER_NAME) --region $(AWS_REGION)
-            displayName: 'Configure kubectl for EKS'
+            displayName: 'Configure kubectl'
             env:
               AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
               AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
@@ -112,4 +113,4 @@ stages:
           - script: |
               kubectl apply -f deployment/deployment.yaml
               kubectl apply -f deployment/service.yaml
-            displayName: 'Deploy Kubernetes Resources'
+            displayName: 'Deploy to EKS'
