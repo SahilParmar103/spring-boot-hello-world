@@ -25,11 +25,11 @@ stages:
               terraformVersion: '1.6.6'
 
           - task: AWSCLI@1
+            displayName: 'Verify AWS Access'
             inputs:
               awsCredentials: 'aws-devops-admin'
               awsRegion: '$(AWS_REGION)'
-              command: 'sts get-caller-identity'
-            displayName: 'Verify AWS Access'
+              awsCommand: 'sts get-caller-identity'
 
           - script: |
               terraform init
@@ -44,6 +44,7 @@ stages:
             displayName: 'Terraform Apply'
 
   - stage: BuildAndPush
+    displayName: 'Build and Push Docker Image'
     dependsOn: TerraformEKS
     jobs:
       - job: Build
@@ -57,34 +58,36 @@ stages:
               options: '-DskipTests'
 
           - script: |
-              docker build -t $ECR_URI:latest .
+              docker build -t $(ECR_URI):latest .
             displayName: 'Build Docker Image'
 
           - task: AWSCLI@1
+            displayName: 'Login to ECR'
             inputs:
               awsCredentials: 'aws-devops-admin'
               awsRegion: '$(AWS_REGION)'
-              command: |
-                ecr get-login-password --region $(AWS_REGION) \
-                | docker login --username AWS --password-stdin $(ECR_URI)
-            displayName: 'Login to ECR'
+              awsCommand: 'ecr get-login-password'
 
           - script: |
-              docker push $ECR_URI:latest
+              aws ecr get-login-password --region $(AWS_REGION) \
+              | docker login --username AWS --password-stdin $(ECR_URI)
+            displayName: 'Docker Login to ECR'
+
+          - script: |
+              docker push $(ECR_URI):latest
             displayName: 'Push to ECR'
 
   - stage: DeployToEKS
+    displayName: 'Deploy to EKS'
     dependsOn: BuildAndPush
     jobs:
       - job: Deploy
         steps:
           - checkout: self
 
-          - task: AWSCLI@1
-            inputs:
-              awsCredentials: 'aws-devops-admin'
-              awsRegion: '$(AWS_REGION)'
-              command: 'eks update-kubeconfig --name $(CLUSTER_NAME)'
+          - script: |
+              aws eks update-kubeconfig --name $(CLUSTER_NAME) --region $(AWS_REGION)
+            displayName: 'Configure kubectl with EKS'
 
           - script: |
               kubectl apply -f deployment/deployment.yaml
