@@ -21,6 +21,14 @@ stages:
         steps:
           - checkout: self
 
+          - task: AWSShellScript@1
+            name: awsLogin
+            inputs:
+              awsCredentials: 'aws-devops-admin'
+              regionName: '$(AWS_REGION)'
+              scriptType: 'inline'
+              inlineScript: 'aws sts get-caller-identity'
+
           - task: TerraformInstaller@1
             inputs:
               terraformVersion: '1.6.6'
@@ -29,25 +37,16 @@ stages:
               echo "Running Terraform Init"
               terraform init
             displayName: 'Terraform Init'
-            env:
-              AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
-              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
 
           - script: |
               echo "Running Terraform Plan"
               terraform plan -out=tfplan
             displayName: 'Terraform Plan'
-            env:
-              AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
-              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
 
           - script: |
               echo "Running Terraform Apply"
               terraform apply -auto-approve tfplan
             displayName: 'Terraform Apply'
-            env:
-              AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
-              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
 
   - stage: BuildAndPush
     displayName: 'Build and Push Docker Image'
@@ -57,6 +56,14 @@ stages:
         displayName: 'Docker Build & Push'
         steps:
           - checkout: self
+
+          - task: AWSShellScript@1
+            name: awsLogin
+            inputs:
+              awsCredentials: 'aws-devops-admin'
+              regionName: '$(AWS_REGION)'
+              scriptType: 'inline'
+              inlineScript: 'aws sts get-caller-identity'
 
           - task: Maven@3
             inputs:
@@ -72,15 +79,9 @@ stages:
               aws ecr get-login-password --region $(AWS_REGION) \
               | docker login --username AWS --password-stdin $(ECR_URI)
             displayName: 'Docker Login to ECR'
-            env:
-              AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
-              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
 
           - script: docker push $(ECR_URI):latest
             displayName: 'Push Image to ECR'
-            env:
-              AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
-              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
 
   - stage: DeployToEKS
     displayName: 'Deploy to EKS'
@@ -91,12 +92,17 @@ stages:
         steps:
           - checkout: self
 
+          - task: AWSShellScript@1
+            name: awsLogin
+            inputs:
+              awsCredentials: 'aws-devops-admin'
+              regionName: '$(AWS_REGION)'
+              scriptType: 'inline'
+              inlineScript: 'aws sts get-caller-identity'
+
           - script: |
               aws eks update-kubeconfig --name $(CLUSTER_NAME) --region $(AWS_REGION)
             displayName: 'Configure kubectl'
-            env:
-              AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
-              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
 
           - script: |
               kubectl apply -f deployment/deployment.yaml
