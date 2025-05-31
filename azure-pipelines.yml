@@ -38,22 +38,22 @@ stages:
           - script: |
               terraform init
             displayName: 'Terraform Init'
-            workingDirectory: $(TF_WORKING_DIR)
+            workingDirectory: $(Build.SourcesDirectory)
 
           - script: |
               terraform validate
             displayName: 'Terraform Validate'
-            workingDirectory: $(TF_WORKING_DIR)
+            workingDirectory: $(Build.SourcesDirectory)
 
           - script: |
               terraform plan -out=tfplan
             displayName: 'Terraform Plan'
-            workingDirectory: $(TF_WORKING_DIR)
+            workingDirectory: $(Build.SourcesDirectory)
 
           - script: |
               terraform apply -auto-approve tfplan
             displayName: 'Terraform Apply'
-            workingDirectory: $(TF_WORKING_DIR)
+            workingDirectory: $(Build.SourcesDirectory)
 
   - stage: BuildAndPush
     displayName: 'Build and Push Docker Image'
