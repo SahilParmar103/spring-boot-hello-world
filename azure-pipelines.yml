@@ -21,7 +21,7 @@ stages:
         steps:
           - task: TerraformInstaller@1
             inputs:
-              terraformVersion: '$(TF_VERSION)'
+              terraformVersion: '1.6.6'
             displayName: 'Install Terraform'
 
           - task: AWSCLI@1
