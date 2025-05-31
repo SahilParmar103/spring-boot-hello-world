@@ -1,66 +1,132 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
+trigger:
+  branches:
+    include:
+      - main
 
-  backend "s3" {
-    bucket = "bucketforazur"
-    key    = "eks/terraform.tfstate"
-    region = "us-east-1"
-    encrypt = true
-  }
-}
+pool:
+  vmImage: 'ubuntu-latest'
 
-provider "aws" {
-  region = "us-east-1"
-}
+variables:
+  AWS_REGION: 'us-east-1'
+  ECR_URI: '474668397798.dkr.ecr.us-east-1.amazonaws.com/spring-boot-app'
+  CLUSTER_NAME: 'eks-dev-cluster'
+  TF_IN_AUTOMATION: 'true'
 
-locals {
-  cluster_name = "eks-dev-cluster"
-  vpc_id       = "vpc-07d6d539f6fea04ff"
-  subnet_ids   = [
-    "subnet-0379237fc995b8e91", # us-east-1a
-    "subnet-01edbfe6e2fe4af5a", # us-east-1b
-    "subnet-0697fa3ca382ef8ca", # us-east-1c
-  ]
-}
+stages:
+  - stage: TerraformEKS
+    displayName: 'Provision EKS via Terraform'
+    jobs:
+      - job: Terraform
+        displayName: 'Run Terraform'
+        steps:
+          - checkout: self
 
-# ✅ ECR Repository for Spring Boot App
-resource "aws_ecr_repository" "spring_boot_app" {
-  name                 = "spring-boot-app"
-  image_tag_mutability = "MUTABLE"
+          - task: AWSCLI@1
+            name: awsLogin
+            displayName: 'Export AWS Credentials'
+            inputs:
+              awsCredentials: 'aws-devops-admin'
+              awsRegion: '$(AWS_REGION)'
+              awsCommand: 'sts'
+              awsSubCommand: 'get-caller-identity'
+              outputVariables: 'awsAccessKeyId,awsSecretAccessKey,awsSessionToken'
 
-  tags = {
-    Name        = "spring-boot-app"
-    Environment = "dev"
-    Terraform   = "true"
-  }
-}
+          - task: TerraformInstaller@1
+            inputs:
+              terraformVersion: '1.6.6'
 
-module "eks" {
-  source  = "terraform-aws-modules/eks/aws"
-  version = "~> 20.31"
+          - script: |
+              echo "Running Terraform Init"
+              export AWS_ACCESS_KEY_ID=$(awsLogin.awsAccessKeyId)
+              export AWS_SECRET_ACCESS_KEY=$(awsLogin.awsSecretAccessKey)
+              export AWS_SESSION_TOKEN=$(awsLogin.awsSessionToken)
+              terraform init
+            displayName: 'Terraform Init'
 
-  cluster_name    = local.cluster_name
-  cluster_version = "1.31"
+          - script: |
+              echo "Running Terraform Plan"
+              export AWS_ACCESS_KEY_ID=$(awsLogin.awsAccessKeyId)
+              export AWS_SECRET_ACCESS_KEY=$(awsLogin.awsSecretAccessKey)
+              export AWS_SESSION_TOKEN=$(awsLogin.awsSessionToken)
+              terraform plan -out=tfplan
+            displayName: 'Terraform Plan'
 
-  vpc_id     = local.vpc_id
-  subnet_ids = local.subnet_ids
+          - script: |
+              echo "Running Terraform Apply"
+              export AWS_ACCESS_KEY_ID=$(awsLogin.awsAccessKeyId)
+              export AWS_SECRET_ACCESS_KEY=$(awsLogin.awsSecretAccessKey)
+              export AWS_SESSION_TOKEN=$(awsLogin.awsSessionToken)
+              terraform apply -auto-approve tfplan
+            displayName: 'Terraform Apply'
 
-  eks_managed_node_groups = {
-    default = {
-      instance_types = ["t3.medium"]
-      desired_size   = 2
-      min_size       = 1
-      max_size       = 3
-    }
-  }
+  - stage: BuildAndPush
+    displayName: 'Build and Push Docker Image'
+    dependsOn: TerraformEKS
+    jobs:
+      - job: Build
+        displayName: 'Docker Build & Push'
+        steps:
+          - checkout: self
 
-  tags = {
-    Terraform   = "true"
-    Environment = "dev"
-  }
-}
+          - task: AWSCLI@1
+            name: awsLogin
+            displayName: 'Export AWS Credentials'
+            inputs:
+              awsCredentials: 'aws-devops-admin'
+              awsRegion: '$(AWS_REGION)'
+              awsCommand: 'sts'
+              awsSubCommand: 'get-caller-identity'
+              outputVariables: 'awsAccessKeyId,awsSecretAccessKey,awsSessionToken'
+
+          - task: Maven@3
+            inputs:
+              mavenPomFile: 'pom.xml'
+              goals: 'clean package'
+              options: '-DskipTests'
+            displayName: 'Build Spring Boot App'
+
+          - script: docker build -t $(ECR_URI):latest .
+            displayName: 'Build Docker Image'
+
+          - script: |
+              export AWS_ACCESS_KEY_ID=$(awsLogin.awsAccessKeyId)
+              export AWS_SECRET_ACCESS_KEY=$(awsLogin.awsSecretAccessKey)
+              export AWS_SESSION_TOKEN=$(awsLogin.awsSessionToken)
+              aws ecr get-login-password --region $(AWS_REGION) \
+              | docker login --username AWS --password-stdin $(ECR_URI)
+            displayName: 'Docker Login to ECR'
+
+          - script: |
+              docker push $(ECR_URI):latest
+            displayName: 'Push Image to ECR'
+
+  - stage: DeployToEKS
+    displayName: 'Deploy to EKS'
+    dependsOn: BuildAndPush
+    jobs:
+      - job: Deploy
+        displayName: 'Kubernetes Deploy'
+        steps:
+          - checkout: self
+
+          - task: AWSCLI@1
+            name: awsLogin
+            displayName: 'Export AWS Credentials'
+            inputs:
+              awsCredentials: 'aws-devops-admin'
+              awsRegion: '$(AWS_REGION)'
+              awsCommand: 'sts'
+              awsSubCommand: 'get-caller-identity'
+              outputVariables: 'awsAccessKeyId,awsSecretAccessKey,awsSessionToken'
+
+          - script: |
+              export AWS_ACCESS_KEY_ID=$(awsLogin.awsAccessKeyId)
+              export AWS_SECRET_ACCESS_KEY=$(awsLogin.awsSecretAccessKey)
+              export AWS_SESSION_TOKEN=$(awsLogin.awsSessionToken)
+              aws eks update-kubeconfig --name $(CLUSTER_NAME) --region $(AWS_REGION)
+            displayName: 'Configure kubectl'
+
+          - script: |
+              kubectl apply -f deployment/deployment.yaml
+              kubectl apply -f deployment/service.yaml
+            displayName: 'Deploy to EKS'
