@@ -23,12 +23,13 @@ stages:
 
           - task: AWSCLI@1
             name: awsLogin
-            displayName: 'Inject AWS Credentials'
+            displayName: 'Export AWS Credentials'
             inputs:
               awsCredentials: 'aws-devops-admin'
               awsRegion: '$(AWS_REGION)'
               awsCommand: 'sts'
               awsSubCommand: 'get-caller-identity'
+              outputVariables: 'awsAccessKeyId,awsSecretAccessKey,awsSessionToken'
 
           - task: TerraformInstaller@1
             inputs:
@@ -36,16 +37,25 @@ stages:
 
           - script: |
               echo "Running Terraform Init"
+              export AWS_ACCESS_KEY_ID=$(awsLogin.awsAccessKeyId)
+              export AWS_SECRET_ACCESS_KEY=$(awsLogin.awsSecretAccessKey)
+              export AWS_SESSION_TOKEN=$(awsLogin.awsSessionToken)
               terraform init
             displayName: 'Terraform Init'
 
           - script: |
               echo "Running Terraform Plan"
+              export AWS_ACCESS_KEY_ID=$(awsLogin.awsAccessKeyId)
+              export AWS_SECRET_ACCESS_KEY=$(awsLogin.awsSecretAccessKey)
+              export AWS_SESSION_TOKEN=$(awsLogin.awsSessionToken)
               terraform plan -out=tfplan
             displayName: 'Terraform Plan'
 
           - script: |
               echo "Running Terraform Apply"
+              export AWS_ACCESS_KEY_ID=$(awsLogin.awsAccessKeyId)
+              export AWS_SECRET_ACCESS_KEY=$(awsLogin.awsSecretAccessKey)
+              export AWS_SESSION_TOKEN=$(awsLogin.awsSessionToken)
               terraform apply -auto-approve tfplan
             displayName: 'Terraform Apply'
 
@@ -60,12 +70,13 @@ stages:
 
           - task: AWSCLI@1
             name: awsLogin
-            displayName: 'Inject AWS Credentials'
+            displayName: 'Export AWS Credentials'
             inputs:
               awsCredentials: 'aws-devops-admin'
               awsRegion: '$(AWS_REGION)'
               awsCommand: 'sts'
               awsSubCommand: 'get-caller-identity'
+              outputVariables: 'awsAccessKeyId,awsSecretAccessKey,awsSessionToken'
 
           - task: Maven@3
             inputs:
@@ -78,11 +89,15 @@ stages:
             displayName: 'Build Docker Image'
 
           - script: |
+              export AWS_ACCESS_KEY_ID=$(awsLogin.awsAccessKeyId)
+              export AWS_SECRET_ACCESS_KEY=$(awsLogin.awsSecretAccessKey)
+              export AWS_SESSION_TOKEN=$(awsLogin.awsSessionToken)
               aws ecr get-login-password --region $(AWS_REGION) \
               | docker login --username AWS --password-stdin $(ECR_URI)
             displayName: 'Docker Login to ECR'
 
-          - script: docker push $(ECR_URI):latest
+          - script: |
+              docker push $(ECR_URI):latest
             displayName: 'Push Image to ECR'
 
   - stage: DeployToEKS
@@ -96,14 +111,18 @@ stages:
 
           - task: AWSCLI@1
             name: awsLogin
-            displayName: 'Inject AWS Credentials'
+            displayName: 'Export AWS Credentials'
             inputs:
               awsCredentials: 'aws-devops-admin'
               awsRegion: '$(AWS_REGION)'
               awsCommand: 'sts'
               awsSubCommand: 'get-caller-identity'
+              outputVariables: 'awsAccessKeyId,awsSecretAccessKey,awsSessionToken'
 
           - script: |
+              export AWS_ACCESS_KEY_ID=$(awsLogin.awsAccessKeyId)
+              export AWS_SECRET_ACCESS_KEY=$(awsLogin.awsSecretAccessKey)
+              export AWS_SESSION_TOKEN=$(awsLogin.awsSessionToken)
               aws eks update-kubeconfig --name $(CLUSTER_NAME) --region $(AWS_REGION)
             displayName: 'Configure kubectl'
 
