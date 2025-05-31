@@ -18,6 +18,7 @@ stages:
     jobs:
       - job: Terraform
         displayName: 'Run Terraform'
+        name: TerraformJob
         steps:
           - checkout: self
 
@@ -38,23 +39,23 @@ stages:
           - script: terraform init
             displayName: 'Terraform Init'
             env:
-              AWS_ACCESS_KEY_ID: $(awsLogin.awsAccessKeyId)
-              AWS_SECRET_ACCESS_KEY: $(awsLogin.awsSecretAccessKey)
-              AWS_SESSION_TOKEN: $(awsLogin.awsSessionToken)
+              AWS_ACCESS_KEY_ID: $[ dependencies.TerraformJob.outputs['awsLogin.awsAccessKeyId'] ]
+              AWS_SECRET_ACCESS_KEY: $[ dependencies.TerraformJob.outputs['awsLogin.awsSecretAccessKey'] ]
+              AWS_SESSION_TOKEN: $[ dependencies.TerraformJob.outputs['awsLogin.awsSessionToken'] ]
 
           - script: terraform plan -out=tfplan
             displayName: 'Terraform Plan'
             env:
-              AWS_ACCESS_KEY_ID: $(awsLogin.awsAccessKeyId)
-              AWS_SECRET_ACCESS_KEY: $(awsLogin.awsSecretAccessKey)
-              AWS_SESSION_TOKEN: $(awsLogin.awsSessionToken)
+              AWS_ACCESS_KEY_ID: $[ dependencies.TerraformJob.outputs['awsLogin.awsAccessKeyId'] ]
+              AWS_SECRET_ACCESS_KEY: $[ dependencies.TerraformJob.outputs['awsLogin.awsSecretAccessKey'] ]
+              AWS_SESSION_TOKEN: $[ dependencies.TerraformJob.outputs['awsLogin.awsSessionToken'] ]
 
           - script: terraform apply -auto-approve tfplan
             displayName: 'Terraform Apply'
             env:
-              AWS_ACCESS_KEY_ID: $(awsLogin.awsAccessKeyId)
-              AWS_SECRET_ACCESS_KEY: $(awsLogin.awsSecretAccessKey)
-              AWS_SESSION_TOKEN: $(awsLogin.awsSessionToken)
+              AWS_ACCESS_KEY_ID: $[ dependencies.TerraformJob.outputs['awsLogin.awsAccessKeyId'] ]
+              AWS_SECRET_ACCESS_KEY: $[ dependencies.TerraformJob.outputs['awsLogin.awsSecretAccessKey'] ]
+              AWS_SESSION_TOKEN: $[ dependencies.TerraformJob.outputs['awsLogin.awsSessionToken'] ]
 
   - stage: BuildAndPush
     displayName: 'Build and Push Docker Image'
@@ -62,6 +63,7 @@ stages:
     jobs:
       - job: Build
         displayName: 'Docker Build & Push'
+        name: BuildJob
         steps:
           - checkout: self
 
@@ -90,9 +92,9 @@ stages:
               | docker login --username AWS --password-stdin $(ECR_URI)
             displayName: 'Docker Login to ECR'
             env:
-              AWS_ACCESS_KEY_ID: $(awsLogin.awsAccessKeyId)
-              AWS_SECRET_ACCESS_KEY: $(awsLogin.awsSecretAccessKey)
-              AWS_SESSION_TOKEN: $(awsLogin.awsSessionToken)
+              AWS_ACCESS_KEY_ID: $[ dependencies.BuildJob.outputs['awsLogin.awsAccessKeyId'] ]
+              AWS_SECRET_ACCESS_KEY: $[ dependencies.BuildJob.outputs['awsLogin.awsSecretAccessKey'] ]
+              AWS_SESSION_TOKEN: $[ dependencies.BuildJob.outputs['awsLogin.awsSessionToken'] ]
 
           - script: docker push $(ECR_URI):latest
             displayName: 'Push Image to ECR'
@@ -103,6 +105,7 @@ stages:
     jobs:
       - job: Deploy
         displayName: 'Kubernetes Deploy'
+        name: DeployJob
         steps:
           - checkout: self
 
@@ -120,9 +123,9 @@ stages:
               aws eks update-kubeconfig --name $(CLUSTER_NAME) --region $(AWS_REGION)
             displayName: 'Configure kubectl'
             env:
-              AWS_ACCESS_KEY_ID: $(awsLogin.awsAccessKeyId)
-              AWS_SECRET_ACCESS_KEY: $(awsLogin.awsSecretAccessKey)
-              AWS_SESSION_TOKEN: $(awsLogin.awsSessionToken)
+              AWS_ACCESS_KEY_ID: $[ dependencies.DeployJob.outputs['awsLogin.awsAccessKeyId'] ]
+              AWS_SECRET_ACCESS_KEY: $[ dependencies.DeployJob.outputs['awsLogin.awsSecretAccessKey'] ]
+              AWS_SESSION_TOKEN: $[ dependencies.DeployJob.outputs['awsLogin.awsSessionToken'] ]
 
           - script: |
               kubectl apply -f deployment/deployment.yaml
