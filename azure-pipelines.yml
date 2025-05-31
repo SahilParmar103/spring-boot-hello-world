@@ -35,29 +35,26 @@ stages:
             inputs:
               terraformVersion: '1.6.6'
 
-          - script: |
-              export AWS_ACCESS_KEY_ID=$(awsCreds_awsAccessKeyId)
-              export AWS_SECRET_ACCESS_KEY=$(awsCreds_awsSecretAccessKey)
-              export AWS_SESSION_TOKEN=$(awsCreds_awsSessionToken)
-
-              terraform init
+          - script: terraform init
             displayName: 'Terraform Init'
+            env:
+              AWS_ACCESS_KEY_ID: $(awsCreds_awsAccessKeyId)
+              AWS_SECRET_ACCESS_KEY: $(awsCreds_awsSecretAccessKey)
+              AWS_SESSION_TOKEN: $(awsCreds_awsSessionToken)
 
-          - script: |
-              export AWS_ACCESS_KEY_ID=$(awsCreds_awsAccessKeyId)
-              export AWS_SECRET_ACCESS_KEY=$(awsCreds_awsSecretAccessKey)
-              export AWS_SESSION_TOKEN=$(awsCreds_awsSessionToken)
-
-              terraform plan -out=tfplan
+          - script: terraform plan -out=tfplan
             displayName: 'Terraform Plan'
+            env:
+              AWS_ACCESS_KEY_ID: $(awsCreds_awsAccessKeyId)
+              AWS_SECRET_ACCESS_KEY: $(awsCreds_awsSecretAccessKey)
+              AWS_SESSION_TOKEN: $(awsCreds_awsSessionToken)
 
-          - script: |
-              export AWS_ACCESS_KEY_ID=$(awsCreds_awsAccessKeyId)
-              export AWS_SECRET_ACCESS_KEY=$(awsCreds_awsSecretAccessKey)
-              export AWS_SESSION_TOKEN=$(awsCreds_awsSessionToken)
-
-              terraform apply -auto-approve tfplan
+          - script: terraform apply -auto-approve tfplan
             displayName: 'Terraform Apply'
+            env:
+              AWS_ACCESS_KEY_ID: $(awsCreds_awsAccessKeyId)
+              AWS_SECRET_ACCESS_KEY: $(awsCreds_awsSecretAccessKey)
+              AWS_SESSION_TOKEN: $(awsCreds_awsSessionToken)
 
   - stage: BuildAndPush
     displayName: 'Build and Push Docker Image'
@@ -89,13 +86,13 @@ stages:
             displayName: 'Build Docker Image'
 
           - script: |
-              export AWS_ACCESS_KEY_ID=$(awsCreds_awsAccessKeyId)
-              export AWS_SECRET_ACCESS_KEY=$(awsCreds_awsSecretAccessKey)
-              export AWS_SESSION_TOKEN=$(awsCreds_awsSessionToken)
-
               aws ecr get-login-password --region $(AWS_REGION) \
               | docker login --username AWS --password-stdin $(ECR_URI)
             displayName: 'Docker Login to ECR'
+            env:
+              AWS_ACCESS_KEY_ID: $(awsCreds_awsAccessKeyId)
+              AWS_SECRET_ACCESS_KEY: $(awsCreds_awsSecretAccessKey)
+              AWS_SESSION_TOKEN: $(awsCreds_awsSessionToken)
 
           - script: docker push $(ECR_URI):latest
             displayName: 'Push Image to ECR'
@@ -120,12 +117,12 @@ stages:
               outputVariables: 'awsAccessKeyId,awsSecretAccessKey,awsSessionToken'
 
           - script: |
-              export AWS_ACCESS_KEY_ID=$(awsCreds_awsAccessKeyId)
-              export AWS_SECRET_ACCESS_KEY=$(awsCreds_awsSecretAccessKey)
-              export AWS_SESSION_TOKEN=$(awsCreds_awsSessionToken)
-
               aws eks update-kubeconfig --name $(CLUSTER_NAME) --region $(AWS_REGION)
             displayName: 'Configure kubectl'
+            env:
+              AWS_ACCESS_KEY_ID: $(awsCreds_awsAccessKeyId)
+              AWS_SECRET_ACCESS_KEY: $(awsCreds_awsSecretAccessKey)
+              AWS_SESSION_TOKEN: $(awsCreds_awsSessionToken)
 
           - script: |
               kubectl apply -f deployment/deployment.yaml
