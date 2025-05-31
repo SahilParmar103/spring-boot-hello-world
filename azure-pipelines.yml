@@ -25,18 +25,8 @@ stages:
             inputs:
               terraformVersion: '1.6.6'
 
-          - task: AWSCLI@1
-            name: AwsLogin
-            displayName: 'Verify AWS Credentials'
-            inputs:
-              awsCredentials: 'aws-devops-admin'
-              awsRegion: '$(AWS_REGION)'
-              awsCommand: 'sts'
-              awsSubCommand: 'get-caller-identity'
-
           - script: |
-              export AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID)
-              export AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY)
+              echo "Running Terraform Init"
               terraform init
             displayName: 'Terraform Init'
             env:
@@ -44,8 +34,7 @@ stages:
               AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
 
           - script: |
-              export AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID)
-              export AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY)
+              echo "Running Terraform Plan"
               terraform plan -out=tfplan
             displayName: 'Terraform Plan'
             env:
@@ -53,8 +42,7 @@ stages:
               AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
 
           - script: |
-              export AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID)
-              export AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY)
+              echo "Running Terraform Apply"
               terraform apply -auto-approve tfplan
             displayName: 'Terraform Apply'
             env:
