@@ -21,13 +21,14 @@ stages:
         steps:
           - checkout: self
 
-          - task: AWSShellScript@1
+          - task: AWSCLI@1
             name: awsLogin
+            displayName: 'Inject AWS Credentials'
             inputs:
               awsCredentials: 'aws-devops-admin'
-              regionName: '$(AWS_REGION)'
-              scriptType: 'inline'
-              inlineScript: 'aws sts get-caller-identity'
+              awsRegion: '$(AWS_REGION)'
+              awsCommand: 'sts'
+              awsSubCommand: 'get-caller-identity'
 
           - task: TerraformInstaller@1
             inputs:
@@ -57,13 +58,14 @@ stages:
         steps:
           - checkout: self
 
-          - task: AWSShellScript@1
+          - task: AWSCLI@1
             name: awsLogin
+            displayName: 'Inject AWS Credentials'
             inputs:
               awsCredentials: 'aws-devops-admin'
-              regionName: '$(AWS_REGION)'
-              scriptType: 'inline'
-              inlineScript: 'aws sts get-caller-identity'
+              awsRegion: '$(AWS_REGION)'
+              awsCommand: 'sts'
+              awsSubCommand: 'get-caller-identity'
 
           - task: Maven@3
             inputs:
@@ -92,13 +94,14 @@ stages:
         steps:
           - checkout: self
 
-          - task: AWSShellScript@1
+          - task: AWSCLI@1
             name: awsLogin
+            displayName: 'Inject AWS Credentials'
             inputs:
               awsCredentials: 'aws-devops-admin'
-              regionName: '$(AWS_REGION)'
-              scriptType: 'inline'
-              inlineScript: 'aws sts get-caller-identity'
+              awsRegion: '$(AWS_REGION)'
+              awsCommand: 'sts'
+              awsSubCommand: 'get-caller-identity'
 
           - script: |
               aws eks update-kubeconfig --name $(CLUSTER_NAME) --region $(AWS_REGION)
