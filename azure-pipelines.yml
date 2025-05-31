@@ -24,15 +24,15 @@ stages:
             inputs:
               terraformVersion: '1.6.6'
 
+          # ✅ Correct way to expose AWS credentials to the environment
           - task: AWSShellScript@1
-  displayName: 'Configure AWS Credentials'
-  inputs:
-    awsCredentials: 'aws-devops-admin'
-    regionName: 'us-east-1'
-    scriptType: 'inline'
-    inlineScript: |
-      echo "AWS credentials configured."
-
+            displayName: 'Configure AWS Credentials'
+            inputs:
+              awsCredentials: 'aws-devops-admin'  # Your AWS service connection name
+              regionName: '$(AWS_REGION)'
+              scriptType: 'inline'
+              inlineScript: |
+                echo "AWS credentials configured."
 
           - checkout: self
 
