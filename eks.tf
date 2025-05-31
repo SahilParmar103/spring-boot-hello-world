@@ -10,7 +10,9 @@ terraform {
     bucket = "bucketforazur"
     key    = "eks/terraform.tfstate"
     region = "us-east-1"
-    encrypt = true
+    assume_role = {
+      role_arn = "arn:aws:iam::474668397798:user/sahil@103"
+    }
   }
 }
 
