@@ -11,7 +11,7 @@ terraform {
     key    = "eks/terraform.tfstate"
     region = "us-east-1"
     assume_role = {
-      role_arn = "arn:aws:iam::474668397798:user/sahil@103"
+      role_arn = "arn:aws:iam::474668397798:role/S3Role"
     }
   }
 }
