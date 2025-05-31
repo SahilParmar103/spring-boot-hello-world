@@ -18,7 +18,7 @@ provider "aws" {
   region = "us-east-1"
 }
 
-locals {
+local {
   cluster_name = "eks-dev-cluster"
   vpc_id       = "vpc-07d6d539f6fea04ff"
   subnet_ids   = [
