@@ -13,7 +13,7 @@ variables:
   TF_IN_AUTOMATION: 'true'
 
 stages:
-  - stage: TerraformApply
+  - stage: TerraformEKS
     displayName: 'Terraform EKS Apply'
     jobs:
       - job: Terraform
