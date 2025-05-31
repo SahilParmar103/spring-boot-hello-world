@@ -1,104 +1,45 @@
-trigger:
-  branches:
-    include:
-      - main
+- stage: TerraformEKS
+  displayName: 'Provision EKS via Terraform'
+  jobs:
+    - job: Terraform
+      displayName: 'Run Terraform'
+      steps:
+        - checkout: self
 
-pool:
-  vmImage: 'ubuntu-latest'
+        - task: AWSCLI@1
+          name: awsCreds
+          displayName: 'Get AWS Credentials'
+          inputs:
+            awsCredentials: 'aws-devops-admin'
+            awsRegion: '$(AWS_REGION)'
+            awsCommand: 'sts'
+            awsSubCommand: 'get-caller-identity'
+            outputVariables: 'awsAccessKeyId,awsSecretAccessKey,awsSessionToken'
 
-variables:
-  AWS_REGION: 'us-east-1'
-  ECR_URI: '474668397798.dkr.ecr.us-east-1.amazonaws.com/spring-boot-app'
-  CLUSTER_NAME: 'eks-dev-cluster'
-  TF_IN_AUTOMATION: 'true'
+        - task: TerraformInstaller@1
+          inputs:
+            terraformVersion: '1.6.6'
 
-stages:
-  - stage: TerraformEKS
-    displayName: 'Provision EKS via Terraform'
-    jobs:
-      - job: Terraform
-        displayName: 'Run Terraform'
-        steps:
-          - checkout: self
+        - script: |
+            export AWS_ACCESS_KEY_ID=$(awsCreds_awsAccessKeyId)
+            export AWS_SECRET_ACCESS_KEY=$(awsCreds_awsSecretAccessKey)
+            export AWS_SESSION_TOKEN=$(awsCreds_awsSessionToken)
 
-          - task: AWSCLI@1
-            displayName: 'Verify AWS Credentials'
-            inputs:
-              awsCredentials: 'aws-devops-admin'
-              awsRegion: '$(AWS_REGION)'
-              awsCommand: 'sts'
-              awsSubCommand: 'get-caller-identity'
+            terraform init
+          displayName: 'Terraform Init'
 
-          - task: TerraformInstaller@1
-            inputs:
-              terraformVersion: '1.6.6'
+        - script: |
+            export AWS_ACCESS_KEY_ID=$(awsCreds_awsAccessKeyId)
+            export AWS_SECRET_ACCESS_KEY=$(awsCreds_awsSecretAccessKey)
+            export AWS_SESSION_TOKEN=$(awsCreds_awsSessionToken)
 
-          - script: terraform init
-            displayName: 'Terraform Init'
+            terraform plan -out=tfplan
+          displayName: 'Terraform Plan'
 
-          - script: terraform plan -out=tfplan
-            displayName: 'Terraform Plan'
+        - script: |
+            export AWS_ACCESS_KEY_ID=$(awsCreds_awsAccessKeyId)
+            export AWS_SECRET_ACCESS_KEY=$(awsCreds_awsSecretAccessKey)
+            export AWS_SESSION_TOKEN=$(awsCreds_awsSessionToken)
 
-          - script: terraform apply -auto-approve tfplan
-            displayName: 'Terraform Apply'
-
-  - stage: BuildAndPush
-    displayName: 'Build and Push Docker Image'
-    dependsOn: TerraformEKS
-    jobs:
-      - job: Build
-        displayName: 'Docker Build & Push'
-        steps:
-          - checkout: self
-
-          - task: AWSCLI@1
-            displayName: 'Verify AWS Credentials'
-            inputs:
-              awsCredentials: 'aws-devops-admin'
-              awsRegion: '$(AWS_REGION)'
-              awsCommand: 'sts'
-              awsSubCommand: 'get-caller-identity'
-
-          - task: Maven@3
-            inputs:
-              mavenPomFile: 'pom.xml'
-              goals: 'clean package'
-              options: '-DskipTests'
-            displayName: 'Build Spring Boot App'
-
-          - script: docker build -t $(ECR_URI):latest .
-            displayName: 'Build Docker Image'
-
-          - script: |
-              aws ecr get-login-password --region $(AWS_REGION) \
-              | docker login --username AWS --password-stdin $(ECR_URI)
-            displayName: 'Docker Login to ECR'
-
-          - script: docker push $(ECR_URI):latest
-            displayName: 'Push Image to ECR'
-
-  - stage: DeployToEKS
-    displayName: 'Deploy to EKS'
-    dependsOn: BuildAndPush
-    jobs:
-      - job: Deploy
-        displayName: 'Kubernetes Deploy'
-        steps:
-          - checkout: self
-
-          - task: AWSCLI@1
-            displayName: 'Verify AWS Credentials'
-            inputs:
-              awsCredentials: 'aws-devops-admin'
-              awsRegion: '$(AWS_REGION)'
-              awsCommand: 'sts'
-              awsSubCommand: 'get-caller-identity'
-
-          - script: |
-              aws eks update-kubeconfig --name $(CLUSTER_NAME) --region $(AWS_REGION)
-            displayName: 'Configure kubectl'
-
-          - script: |
-              kubectl apply -f deployment/deployment.yaml
-              kubectl apply -f deployment/service.yaml
-            displayName: 'Deploy to EKS'
+            terraform apply -auto-approve tfplan
+          displayName: 'Terraform Apply'
