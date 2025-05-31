@@ -19,17 +19,6 @@ provider "aws" {
 }
 
 
-# ✅ ECR Repository for Spring Boot App
-resource "aws_ecr_repository" "spring_boot_app" {
-  name                 = "spring-boot-app"
-  image_tag_mutability = "MUTABLE"
-
-  tags = {
-    Name        = "spring-boot-app"
-    Environment = "dev"
-    Terraform   = "true"
-  }
-}
 
 
 
@@ -64,6 +53,18 @@ module "eks" {
   }
 
   tags = {
+    Environment = "dev"
+    Terraform   = "true"
+  }
+}
+
+# ✅ ECR Repository for Spring Boot App
+resource "aws_ecr_repository" "spring_boot_app" {
+  name                 = "spring-boot-app"
+  image_tag_mutability = "MUTABLE"
+
+  tags = {
+    Name        = "spring-boot-app"
     Environment = "dev"
     Terraform   = "true"
   }
