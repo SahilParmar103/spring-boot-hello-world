@@ -42,10 +42,10 @@ resource "aws_ecr_repository" "spring_boot_app" {
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "20.8.5"
+  version = "~> 20.31"
 
   cluster_name    = local.cluster_name
-  cluster_version = "1.29"
+  cluster_version = "1.31"
 
   vpc_id     = local.vpc_id
   subnet_ids = local.subnet_ids
