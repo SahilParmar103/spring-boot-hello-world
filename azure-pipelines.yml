@@ -1,45 +1,133 @@
-- stage: TerraformEKS
-  displayName: 'Provision EKS via Terraform'
-  jobs:
-    - job: Terraform
-      displayName: 'Run Terraform'
-      steps:
-        - checkout: self
+trigger:
+  branches:
+    include:
+      - main
 
-        - task: AWSCLI@1
-          name: awsCreds
-          displayName: 'Get AWS Credentials'
-          inputs:
-            awsCredentials: 'aws-devops-admin'
-            awsRegion: '$(AWS_REGION)'
-            awsCommand: 'sts'
-            awsSubCommand: 'get-caller-identity'
-            outputVariables: 'awsAccessKeyId,awsSecretAccessKey,awsSessionToken'
+pool:
+  vmImage: 'ubuntu-latest'
 
-        - task: TerraformInstaller@1
-          inputs:
-            terraformVersion: '1.6.6'
+variables:
+  AWS_REGION: 'us-east-1'
+  ECR_URI: '474668397798.dkr.ecr.us-east-1.amazonaws.com/spring-boot-app'
+  CLUSTER_NAME: 'eks-dev-cluster'
+  TF_IN_AUTOMATION: 'true'
 
-        - script: |
-            export AWS_ACCESS_KEY_ID=$(awsCreds_awsAccessKeyId)
-            export AWS_SECRET_ACCESS_KEY=$(awsCreds_awsSecretAccessKey)
-            export AWS_SESSION_TOKEN=$(awsCreds_awsSessionToken)
+stages:
+  - stage: TerraformEKS
+    displayName: 'Provision EKS via Terraform'
+    jobs:
+      - job: Terraform
+        displayName: 'Run Terraform'
+        steps:
+          - checkout: self
 
-            terraform init
-          displayName: 'Terraform Init'
+          - task: AWSCLI@1
+            name: awsCreds
+            displayName: 'Get AWS Credentials'
+            inputs:
+              awsCredentials: 'aws-devops-admin'
+              awsRegion: '$(AWS_REGION)'
+              awsCommand: 'sts'
+              awsSubCommand: 'get-caller-identity'
+              outputVariables: 'awsAccessKeyId,awsSecretAccessKey,awsSessionToken'
 
-        - script: |
-            export AWS_ACCESS_KEY_ID=$(awsCreds_awsAccessKeyId)
-            export AWS_SECRET_ACCESS_KEY=$(awsCreds_awsSecretAccessKey)
-            export AWS_SESSION_TOKEN=$(awsCreds_awsSessionToken)
+          - task: TerraformInstaller@1
+            inputs:
+              terraformVersion: '1.6.6'
 
-            terraform plan -out=tfplan
-          displayName: 'Terraform Plan'
+          - script: |
+              export AWS_ACCESS_KEY_ID=$(awsCreds_awsAccessKeyId)
+              export AWS_SECRET_ACCESS_KEY=$(awsCreds_awsSecretAccessKey)
+              export AWS_SESSION_TOKEN=$(awsCreds_awsSessionToken)
 
-        - script: |
-            export AWS_ACCESS_KEY_ID=$(awsCreds_awsAccessKeyId)
-            export AWS_SECRET_ACCESS_KEY=$(awsCreds_awsSecretAccessKey)
-            export AWS_SESSION_TOKEN=$(awsCreds_awsSessionToken)
+              terraform init
+            displayName: 'Terraform Init'
 
-            terraform apply -auto-approve tfplan
-          displayName: 'Terraform Apply'
+          - script: |
+              export AWS_ACCESS_KEY_ID=$(awsCreds_awsAccessKeyId)
+              export AWS_SECRET_ACCESS_KEY=$(awsCreds_awsSecretAccessKey)
+              export AWS_SESSION_TOKEN=$(awsCreds_awsSessionToken)
+
+              terraform plan -out=tfplan
+            displayName: 'Terraform Plan'
+
+          - script: |
+              export AWS_ACCESS_KEY_ID=$(awsCreds_awsAccessKeyId)
+              export AWS_SECRET_ACCESS_KEY=$(awsCreds_awsSecretAccessKey)
+              export AWS_SESSION_TOKEN=$(awsCreds_awsSessionToken)
+
+              terraform apply -auto-approve tfplan
+            displayName: 'Terraform Apply'
+
+  - stage: BuildAndPush
+    displayName: 'Build and Push Docker Image'
+    dependsOn: TerraformEKS
+    jobs:
+      - job: Build
+        displayName: 'Docker Build & Push'
+        steps:
+          - checkout: self
+
+          - task: AWSCLI@1
+            name: awsCreds
+            displayName: 'Get AWS Credentials'
+            inputs:
+              awsCredentials: 'aws-devops-admin'
+              awsRegion: '$(AWS_REGION)'
+              awsCommand: 'sts'
+              awsSubCommand: 'get-caller-identity'
+              outputVariables: 'awsAccessKeyId,awsSecretAccessKey,awsSessionToken'
+
+          - task: Maven@3
+            inputs:
+              mavenPomFile: 'pom.xml'
+              goals: 'clean package'
+              options: '-DskipTests'
+            displayName: 'Build Spring Boot App'
+
+          - script: docker build -t $(ECR_URI):latest .
+            displayName: 'Build Docker Image'
+
+          - script: |
+              export AWS_ACCESS_KEY_ID=$(awsCreds_awsAccessKeyId)
+              export AWS_SECRET_ACCESS_KEY=$(awsCreds_awsSecretAccessKey)
+              export AWS_SESSION_TOKEN=$(awsCreds_awsSessionToken)
+
+              aws ecr get-login-password --region $(AWS_REGION) \
+              | docker login --username AWS --password-stdin $(ECR_URI)
+            displayName: 'Docker Login to ECR'
+
+          - script: docker push $(ECR_URI):latest
+            displayName: 'Push Image to ECR'
+
+  - stage: DeployToEKS
+    displayName: 'Deploy to EKS'
+    dependsOn: BuildAndPush
+    jobs:
+      - job: Deploy
+        displayName: 'Kubernetes Deploy'
+        steps:
+          - checkout: self
+
+          - task: AWSCLI@1
+            name: awsCreds
+            displayName: 'Get AWS Credentials'
+            inputs:
+              awsCredentials: 'aws-devops-admin'
+              awsRegion: '$(AWS_REGION)'
+              awsCommand: 'sts'
+              awsSubCommand: 'get-caller-identity'
+              outputVariables: 'awsAccessKeyId,awsSecretAccessKey,awsSessionToken'
+
+          - script: |
+              export AWS_ACCESS_KEY_ID=$(awsCreds_awsAccessKeyId)
+              export AWS_SECRET_ACCESS_KEY=$(awsCreds_awsSecretAccessKey)
+              export AWS_SESSION_TOKEN=$(awsCreds_awsSessionToken)
+
+              aws eks update-kubeconfig --name $(CLUSTER_NAME) --region $(AWS_REGION)
+            displayName: 'Configure kubectl'
+
+          - script: |
+              kubectl apply -f deployment/deployment.yaml
+              kubectl apply -f deployment/service.yaml
+            displayName: 'Deploy to EKS'
