@@ -25,14 +25,14 @@ stages:
               terraformVersion: '1.6.6'
 
           - task: AWSShellScript@1
-            name: ConfigureAWS
-            displayName: 'Configure AWS Credentials'
-            inputs:
-              awsCredentials: 'aws-devops-admin'
-              regionName: 'us-east-1'
-              scriptType: 'inline'
-              inlineScript: |
-                echo "AWS credentials configured."
+  displayName: 'Configure AWS Credentials'
+  inputs:
+    awsCredentials: 'aws-devops-admin'
+    regionName: 'us-east-1'
+    scriptType: 'inline'
+    inlineScript: |
+      echo "AWS credentials configured."
+
 
           - checkout: self
 
