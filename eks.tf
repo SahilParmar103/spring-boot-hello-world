@@ -50,10 +50,6 @@ module "eks" {
   vpc_id     = local.vpc_id
   subnet_ids = local.subnet_ids
 
-  iam_role_arn = "arn:aws:iam::474668397798:role/aws-service-role/eks.amazonaws.com/AWSServiceRoleForAmazonEKS"
-
-  manage_aws_auth = true
-
   eks_managed_node_groups = {
     default = {
       instance_types = ["t3.medium"]
