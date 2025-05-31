@@ -18,15 +18,6 @@ provider "aws" {
   region = "us-east-1"
 }
 
-local {
-  cluster_name = "eks-dev-cluster"
-  vpc_id       = "vpc-07d6d539f6fea04ff"
-  subnet_ids   = [
-    "subnet-0379237fc995b8e91", # us-east-1a
-    "subnet-01edbfe6e2fe4af5a", # us-east-1b
-    "subnet-0697fa3ca382ef8ca", # us-east-1c
-  ]
-}
 
 # ✅ ECR Repository for Spring Boot App
 resource "aws_ecr_repository" "spring_boot_app" {
@@ -40,15 +31,28 @@ resource "aws_ecr_repository" "spring_boot_app" {
   }
 }
 
+
+
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 20.31"
 
-  cluster_name    = local.cluster_name
+  cluster_name    = "eks-dev-cluster"
   cluster_version = "1.31"
 
-  vpc_id     = local.vpc_id
-  subnet_ids = local.subnet_ids
+  # Optional
+  cluster_endpoint_public_access = true
+
+  # Optional: Adds the current caller identity as an administrator via cluster access entry
+  enable_cluster_creator_admin_permissions = true
+
+  cluster_compute_config = {
+    enabled    = true
+    node_pools = ["general-purpose"]
+  }
+
+  vpc_id     = "vpc-07d6d539f6fea04ff"
+  subnet_ids = ["subnet-0379237fc995b8e91", "subnet-01edbfe6e2fe4af5a", "subnet-0697fa3ca382ef8ca"]
 
   eks_managed_node_groups = {
     default = {
@@ -60,7 +64,6 @@ module "eks" {
   }
 
   tags = {
-    Terraform   = "true"
     Environment = "dev"
+    Terraform   = "true"
   }
-}
