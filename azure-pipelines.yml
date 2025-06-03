@@ -39,34 +39,22 @@ stages:
           - script: terraform init
             displayName: 'Terraform Init'
             workingDirectory: $(Build.SourcesDirectory)
-            env:
-              AWS_ACCESS_KEY_ID: $(awsCreds_awsAccessKeyId)
-              AWS_SECRET_ACCESS_KEY: $(awsCreds_awsSecretAccessKey)
-              AWS_SESSION_TOKEN: $(awsCreds_awsSessionToken)
+          
 
           - script: terraform validate
             displayName: 'Terraform Validate'
             workingDirectory: $(Build.SourcesDirectory)
-            env:
-              AWS_ACCESS_KEY_ID: $(awsCreds_awsAccessKeyId)
-              AWS_SECRET_ACCESS_KEY: $(awsCreds_awsSecretAccessKey)
-              AWS_SESSION_TOKEN: $(awsCreds_awsSessionToken)
+       
 
           - script: terraform plan -out=tfplan
             displayName: 'Terraform Plan'
             workingDirectory: $(Build.SourcesDirectory)
-            env:
-              AWS_ACCESS_KEY_ID: $(awsCreds_awsAccessKeyId)
-              AWS_SECRET_ACCESS_KEY: $(awsCreds_awsSecretAccessKey)
-              AWS_SESSION_TOKEN: $(awsCreds_awsSessionToken)
+         
 
           - script: terraform apply -auto-approve tfplan
             displayName: 'Terraform Apply'
             workingDirectory: $(Build.SourcesDirectory)
-            env:
-              AWS_ACCESS_KEY_ID: $(awsCreds_awsAccessKeyId)
-              AWS_SECRET_ACCESS_KEY: $(awsCreds_awsSecretAccessKey)
-              AWS_SESSION_TOKEN: $(awsCreds_awsSessionToken)
+         
 
   - stage: BuildAndPush
     displayName: 'Build and Push Docker Image'
@@ -101,10 +89,7 @@ stages:
               aws ecr get-login-password --region $(AWS_REGION) \
               | docker login --username AWS --password-stdin $(ECR_URI)
             displayName: 'Docker Login to ECR'
-            env:
-              AWS_ACCESS_KEY_ID: $(awsCreds_awsAccessKeyId)
-              AWS_SECRET_ACCESS_KEY: $(awsCreds_awsSecretAccessKey)
-              AWS_SESSION_TOKEN: $(awsCreds_awsSessionToken)
+            
 
           - script: docker push $(ECR_URI):latest
             displayName: 'Push Image to ECR'
@@ -131,10 +116,7 @@ stages:
           - script: |
               aws eks update-kubeconfig --name $(CLUSTER_NAME) --region $(AWS_REGION)
             displayName: 'Configure kubectl'
-            env:
-              AWS_ACCESS_KEY_ID: $(awsCreds_awsAccessKeyId)
-              AWS_SECRET_ACCESS_KEY: $(awsCreds_awsSecretAccessKey)
-              AWS_SESSION_TOKEN: $(awsCreds_awsSessionToken)
+    
 
           - script: |
               kubectl apply -f deployment/deployment.yaml
