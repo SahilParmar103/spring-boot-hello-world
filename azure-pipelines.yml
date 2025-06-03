@@ -12,6 +12,7 @@ variables:
   CLUSTER_NAME: 'eks-dev-cluster'
   TF_IN_AUTOMATION: 'true'
 
+
 stages:
   - stage: TerraformEKS
     displayName: 'Terraform EKS Apply'
@@ -23,7 +24,11 @@ stages:
             displayName: 'Install Terraform'
             inputs:
               terraformVersion: '1.6.6'
-
+              provider: 'aws'
+              command: 'init'
+              backendServiceAWS: 'Terraform'
+              backendAWSBucketName: 'bucketforazur'
+              backendAWSKey: 'Terraform.tfstate'
           - task: AWSCLI@1
             name: awsCreds
             displayName: 'Configure AWS Credentials'
