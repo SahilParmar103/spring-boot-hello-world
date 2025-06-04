@@ -12,9 +12,9 @@ terraform {
     bucket = "bucketforazur"
     key    = "eks/terraform.tfstate"
     region = "us-east-1"
-    assume_role = {
-      role_arn = "arn:aws:iam::474668397798:role/S3Role"
-    }
+    #assume_role = {
+     # role_arn = "arn:aws:iam::474668397798:role/S3Role"
+    #}
   }
 }
 
