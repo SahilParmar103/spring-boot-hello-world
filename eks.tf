@@ -5,7 +5,9 @@ terraform {
       version = "~> 5.0"
     }
   }
+}
 
+terraform {
   backend "s3" {
     bucket = "bucketforazur"
     key    = "eks/terraform.tfstate"
